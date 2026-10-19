@@ -13,7 +13,7 @@
 8004809c	g_StreamFileTable	NULL-terminated list of {name*, lba} for MOVIE/ and XA/ files
 800480b8	g_DataEntrySectors	u16[2037]: entry sizes in sectors (index 0 = the offset table itself)
 800588ac	g_SceneId	u32 scene number: scene data = base-1 + id*2, scene code = base + id*2
-8005890f	g_Character	u8 selected playable character; picks the scene-code base. 0 = default character, 1 = Kenneth. 10 bases; values 10..15 alias 0,1,6,7,8,9. Written by overlay 21 (character select) and Mode_LoadOverlay
+8005890f	g_Character	u8 selected playable character; picks the scene-code base. 0 = Eiji Garland, 1 = Kenneth Kirova (4 playable: Eiji, Julia Jefferson, Kenneth Kirova, Yan H Feisu). 10 bases; values 10..15 alias 0,1,6,7,8,9. Written by overlay 21 (character select) and Mode_LoadOverlay
 80058770	g_DataStartLba	LBA of DATA.0 on disc
 80058774	g_CdLoc	CdlLOC used by the DATA.0 reader
 80100000	g_DataOffsetTable	temporary: raw u32 offset table read by Data_Init

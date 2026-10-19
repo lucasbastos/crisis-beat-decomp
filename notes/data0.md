@@ -94,8 +94,13 @@ group overlaps the last code slot of the group before it.
 - **A group is a playable character** (confirmed in session 2). Picking Kenneth on the
   character-select screen (overlay 21, store at ovl21::800683C4) set g_Character = 1,
   and every scene that followed came from base 224. Each character has their own scenario.
-  Groups 0 and 1 have 85 scenes; groups 2–9 have 55. Who or what groups 2–9 are is still open.
-- Character 0 (the default, session 1): demo scene 7 -> 39/40, intro 70 -> 166, then 40 -> 105/106, 41 -> 107/108.
+  Groups 0 and 1 have 85 scenes; groups 2–9 have 55.
+- The select screen offers **4 characters**: Eiji Garland, Julia Jefferson, Kenneth Kirova,
+  Yan H Feisu. 0 = Eiji, 1 = Kenneth.
+- **Hypothesis, untested:** the 10 groups are 4 single characters + 6 two-player
+  pairs (4 choose 2 = 6). Julia and Yan would then be two of groups 2–9. To test, play
+  as Julia, then as Yan, then a 2-player game, and read the `group-write` lines.
+- Character 0 = Eiji (session 1): demo scene 7 -> 39/40, intro 70 -> 166, then 40 -> 105/106, 41 -> 107/108.
 - Character 1 = Kenneth (session 2): intro 74 -> 372, then 30 -> 283/284, 33 -> 289/290, 34 -> 291/292.
 - Before an intro, the game seeks to `base + 3`: entry 29 for character 0, 227 for Kenneth.
 
@@ -103,12 +108,12 @@ group overlaps the last code slot of the group before it.
 
 Captured with `tools/pcsx/log_loads.lua`. The times are emulated seconds since boot.
 
-### Session 1: default character (g_Character 0)
+### Session 1: Eiji (g_Character 0)
 
 | Time | Loads | Screen |
 |---|---|---|
 | 17.9 | overlay 21 | boot, title, menus, character select |
-| 65.5 | overlay 17 (0x1800 bytes) | short step after the character is chosen (first labelled "title / menu", corrected by session 2) |
+| 65.5 | overlay 17 (0x1800 bytes) | short cutscene after the character is chosen |
 | 76–84 | 1, 0, overlay 16, 2016, seek 29, scene code 166 | first in-game scene, before the first playable area (demo or intro: not yet told apart) |
 | 89–95 | 1, 0, overlay 20, seek 16 | a screen that is not gameplay, between that scene and the first area |
 | 103–106 | overlay 16, scene 105 + 106 | gameplay, first area |
@@ -122,7 +127,7 @@ Captured with `tools/pcsx/log_loads.lua`. The times are emulated seconds since b
 | 133–139 | Mode_LoadOverlay sets character 0; 1, 0, overlay 16, scene 7 (39/40) | attract demo (left idle on the title screen) |
 | 174.3 | overlay 21 | back to title |
 | 227.3 | ovl21::800683C4 writes g_Character = 1 | **Kenneth picked** |
-| 230.3 | overlay 17 | short step after selection |
+| 230.3 | overlay 17 | short cutscene after selection |
 | 238–245 | 3, 2, overlay 16, 2018, seek 227, scene code 372 (scene 74) | Kenneth's intro |
 | 252–258 | 3, 2, overlay 20, seek 16 | screen that is not gameplay |
 | 266–268 | overlay 16, scene 30 (283/284) | gameplay |
@@ -134,7 +139,7 @@ Captured with `tools/pcsx/log_loads.lua`. The times are emulated seconds since b
 | Entry | Size | Role |
 |---|---|---|
 | 21 | 0xCB000 | boot, title, menus, **character select** (writes g_Character). Entry ovl21::80065FFC |
-| 17 | 0x1800 | short step after character select. Entry 0x80065764(mode) |
+| 17 | 0x1800 | short cutscene after character select. Entry 0x80065764(mode) |
 | 16 | 0x6E000 | **in-game engine**: loads the scene pairs into slot 2 |
 | 20 | 0x5B000 | screen that is not gameplay, shown before the first area |
 | 19, 24 | | not seen yet |
@@ -148,8 +153,8 @@ slot, which probably just parks the drive head.
       like function pointers into the overlay. Is it an export table the exe calls through?
 - [x] Load overlays into Ghidra as overlay blocks at 0x80064668 (ovl16 done, see `LoadOverlay.java`).
 - [x] Work out the index math of the scene loaders (see Scene layout).
-- [ ] Who are characters 2–9 (55-scene groups)? Find out how many characters can be picked.
+- [ ] Groups 2–9 (55 scenes each): which ones are Julia and Yan? Are the rest two-player pairs?
 - [ ] What decides the 0x8015C000 sub-archive index (2016 / 2018)? It is in FUN_800248F4.
-- [ ] Overlay 17: what is the short step after character select?
+- [x] Overlay 17 is the short cutscene after character select.
 - [ ] Find the meaning of the `0x400`/`0x200` sub-archive headers.
 - [ ] Find out what entries 18, 22 (VAB) and 23 (TIM) are. No direct `Data_LoadEntry` call uses them.
