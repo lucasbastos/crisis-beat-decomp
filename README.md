@@ -28,6 +28,15 @@ This repo contains **no game data**. Use your own legally dumped disc image.
 | `tools/ghidra_scripts/` | Ghidra scripts: export functions, decompile xrefs, create functions, apply `notes/symbols.tsv` |
 | `disc/`, `out/`, `ghidra/` | Local, git-ignored (`ghidra/CrisisBeat.gpr` is the Ghidra project) |
 
+## Runtime logging (PCSX-Redux)
+
+[tools/pcsx/log_loads.lua](tools/pcsx/log_loads.lua) logs every DATA.0 load and seek to `out/loads.tsv`.
+Run it from the repo root:
+
+```
+pcsx-redux.exe -iso "Crisis Beat (Europe).cue" -debugger -interpreter -run -dofile tools\pcsx\log_loads.lua
+```
+
 ## Ghidra workflow
 
 Names live in [notes/symbols.tsv](notes/symbols.tsv), so they are kept in git and can be reviewed.

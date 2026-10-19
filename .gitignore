@@ -27,3 +27,6 @@ bios/
 
 __pycache__/
 *.pyc
+
+# PCSX-Redux crash reporter data (written to its working directory)
+.sentry-native/
