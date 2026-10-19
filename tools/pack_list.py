@@ -6,7 +6,7 @@ little-endian u32 byte offsets, sector aligned, one per entry. The first
 offset equals the table size. Entry i spans offsets[i]..offsets[i+1]; the
 last entry runs to end of file. Zero padding fills the unused table slots.
 
-Usage: python tools/pack_list.py disc/DATA.0 [--extract out/DATA]
+Usage: python tools/pack_list.py disc/DATA.0 [--extract out/DATA] [--entry N ...]
 """
 import argparse
 import struct
@@ -28,6 +28,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("pack")
     ap.add_argument("--extract", metavar="DIR")
+    ap.add_argument("--entry", type=int, nargs="+", help="only list/extract these entries")
     args = ap.parse_args()
 
     data = Path(args.pack).read_bytes()
@@ -36,6 +37,8 @@ def main():
     print(f"table size {table_size:#x}, {len(offsets)} entries, file size {len(data):#x}")
 
     for i, (start, end) in enumerate(zip(bounds, bounds[1:])):
+        if args.entry and i not in args.entry:
+            continue
         head = data[start:start + 8]
         flag = "" if start % 2048 == 0 and end >= start else "  <-- unexpected"
         print(f"{i:4d} {start:#010x} {end - start:#9x}  {head.hex(' ')}{flag}")

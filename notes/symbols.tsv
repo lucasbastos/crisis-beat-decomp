@@ -12,6 +12,11 @@
 8001a790	s_DATA_0	"\DATA.0;1"
 8004809c	g_StreamFileTable	NULL-terminated list of {name*, lba} for MOVIE/ and XA/ files
 800480b8	g_DataEntrySectors	u16[2037]: entry sizes in sectors (index 0 = the offset table itself)
+800588ac	g_SceneId	u32 scene number: scene data = base-1 + id*2, scene code = base + id*2
+8005890f	g_SceneGroup	u8 0..15 selecting the scene-code base (10 groups; 10..15 alias 0,1,6,7,8,9). Written in Mode_LoadOverlay and overlay 21
 80058770	g_DataStartLba	LBA of DATA.0 on disc
 80058774	g_CdLoc	CdlLOC used by the DATA.0 reader
 80100000	g_DataOffsetTable	temporary: raw u32 offset table read by Data_Init
+ovl16::80065cb0	ovl16_Main	in-game entry, called by Mode_LoadOverlay with g_SceneId
+ovl16::80066c14	ovl16_Exit	called by Mode_LoadOverlay after ovl16_Main returns
+ovl16::80068aec	Scene_LoadCode	loads scene code (base + g_SceneId*2, base picked by g_SceneGroup) to 0x80158000

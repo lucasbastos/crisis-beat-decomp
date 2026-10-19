@@ -20,7 +20,14 @@ public class ApplySymbols extends GhidraScript {
         for (String line : Files.readAllLines(Path.of(path))) {
             if (line.isBlank() || line.startsWith("#")) continue;
             String[] cols = line.split("\t", 3);
-            Address a = toAddr(Long.parseUnsignedLong(cols[0], 16));
+            // "8001e488" (main exe) or "ovl16::80068aec" (overlay block)
+            Address a = cols[0].contains("::")
+                    ? currentProgram.getAddressFactory().getAddress(cols[0])
+                    : toAddr(Long.parseUnsignedLong(cols[0], 16));
+            if (a == null || currentProgram.getMemory().getBlock(a) == null) {
+                println("skipping " + cols[0] + ": not in program (overlay not loaded?)");
+                continue;
+            }
             Function f = getFunctionAt(a);
             if (f != null) {
                 f.setName(cols[1], SourceType.USER_DEFINED);

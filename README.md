@@ -25,12 +25,14 @@ This repo contains **no game data**. Use your own legally dumped disc image.
 |---|---|
 | `tools/` | Python scripts (standard library only) |
 | `notes/` | Findings: [disc & exe](notes/disc.md), [DATA.0 format](notes/data0.md) |
-| `tools/ghidra_scripts/` | Ghidra scripts: export functions, decompile xrefs, create functions, apply `notes/symbols.tsv` |
+| `tools/ghidra_scripts/` | Ghidra scripts: export functions, decompile functions / xrefs, create functions, load overlays, apply `notes/symbols.tsv` |
 | `disc/`, `out/`, `ghidra/` | Local, git-ignored (`ghidra/CrisisBeat.gpr` is the Ghidra project) |
 
 ## Runtime logging (PCSX-Redux)
 
-[tools/pcsx/log_loads.lua](tools/pcsx/log_loads.lua) logs every DATA.0 load and seek to `out/loads.tsv`.
+[tools/pcsx/log_loads.lua](tools/pcsx/log_loads.lua) logs every DATA.0 load and seek to `out/loads.tsv`,
+with the current `g_SceneId` and `g_SceneGroup`, plus every write to `g_SceneGroup`.
+Each run overwrites the log, so copy it first to keep it.
 Run it from the repo root:
 
 ```
@@ -48,6 +50,15 @@ Add names there, then apply them to the project (close the Ghidra window first):
 ```
 
 Or run `ApplySymbols.java` from Ghidra's Script Manager (category *CrisisBeat*).
+
+Overlay 16 (in-game engine) is loaded as block `ovl16`. To load another overlay, use
+`ovl16` as the model; entry points are listed in [notes/data0.md](notes/data0.md):
+
+```
+python tools/pack_list.py disc/DATA.0 --entry 21 --extract out/DATA
+<ghidra>\support\analyzeHeadless.bat ghidra CrisisBeat -process SLES_027.93 -noanalysis ^
+    -scriptPath tools\ghidra_scripts -postScript LoadOverlay.java out\DATA\0021.bin 80064668 ovl21 80065ffc
+```
 
 ## External tools
 

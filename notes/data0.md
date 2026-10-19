@@ -58,6 +58,44 @@ FUN_800233A8 is probably the game-mode switch: it picks which overlay to load.
 Code inside overlays also calls `Data_LoadEntry`/`Data_SeekEntry`. Overlay 16 calls them from
 0x80068CAC (load) and 0x80068FE8 (seek). Overlay 20 calls `Data_SeekEntry` from 0x80065744.
 
+## Scene layout (entries 25–2005)
+
+Read from `Scene_LoadCode` (ovl16::80068AEC) and `Scene_LoadData` (0x80023D30):
+
+```
+data entry = base - 1 + g_SceneId * 2   -> 0x80154000
+code entry = base     + g_SceneId * 2   -> 0x80158000  (u32 id, then MIPS code + embedded data)
+```
+
+`base` depends on `g_SceneGroup` (u8 at 0x8005890F):
+
+| g_SceneGroup | base | entries | scenes present |
+|---|---|---|---|
+| 0, 10 | 26 | 25–223 | 85 (ids 7..98) |
+| 1, 11 | 224 | 223–421 | 85 (ids 7..98) |
+| 3 | 422 | 421–619 | 55 (ids 7..66) |
+| 2 | 620 | 619–817 | 55 |
+| 4 | 818 | 817–1015 | 55 |
+| 5 | 1016 | 1015–1213 | 55 |
+| 6, 12, others | 1214 | 1213–1411 | 55 |
+| 8, 14 | 1412 | 1411–1609 | 55 |
+| 7, 13 | 1610 | 1609–1807 | 55 |
+| 9, 15 | 1808 | 1807–2005 | 55 |
+
+The groups sit 198 entries apart (99 scene slots each). The first data slot of each
+group overlaps the last code slot of the group before it.
+
+- **Scene data is the same in every group.** Each group's copy is byte-identical
+  (for example, scene 40 data has the same hash in all 10). It is duplicated on the disc,
+  probably to cut seek times.
+- **Scene code differs per group.** There are 413 distinct blobs, and they differ in
+  embedded binary data rather than in text strings. The header id is the same across
+  groups (scene 40 = 0x2F).
+- What a group *means* is open. It is not a language. It is not chosen in overlay 20
+  (which only reads it). It is written by `Mode_LoadOverlay` and overlay 21.
+  Candidates: playable character, difficulty, or game mode.
+- Session 1 ran with group 0: scene 70 -> code entry 166, scene 40 -> 105/106, scene 41 -> 107/108.
+
 ## Runtime log (first session)
 
 Captured with `tools/pcsx/log_loads.lua`. The times are emulated seconds since boot.
@@ -76,7 +114,7 @@ The screens were confirmed by playing.
 
 | Entry | Size | Role |
 |---|---|---|
-| 21 | 0x6E000 | boot: logos and FMV |
+| 21 | 0xCB000 | boot: logos and FMV. Large, and it writes g_SceneGroup, so it probably holds menus too |
 | 17 | 0x1800 | title / menu |
 | 16 | 0x6E000 | **in-game engine**: loads the scene pairs into slot 2 |
 | 20 | 0x5B000 | screen that is not gameplay, shown before the first area |
