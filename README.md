@@ -18,13 +18,19 @@ This repo contains **no game data**. Use your own legally dumped disc image.
    python tools/pack_list.py disc/DATA.0
    python tools/pack_list.py disc/DATA.0 --extract out/DATA
    ```
+4. List sub-archive sections, or convert TIM images to PNG:
+   ```
+   python tools/subarc_list.py disc/DATA.0 1 105 2016
+   python tools/tim2png.py --opaque out/tims/gallery disc/GALLERY.0
+   python tools/tim2png.py out/tims/data disc/DATA.0 --all-entries
+   ```
 
 ## Layout
 
 | Path | Contents |
 |---|---|
 | `tools/` | Python scripts (standard library only) |
-| `notes/` | Findings: [disc & exe](notes/disc.md), [DATA.0 format](notes/data0.md) |
+| `notes/` | Findings: [disc & exe](notes/disc.md), [DATA.0 format](notes/data0.md), [asset formats](notes/formats.md) |
 | `tools/ghidra_scripts/` | Ghidra scripts: export functions, decompile functions / xrefs, create functions, load overlays, apply `notes/symbols.tsv` |
 | `disc/`, `out/`, `ghidra/` | Local, git-ignored (`ghidra/CrisisBeat.gpr` is the Ghidra project) |
 
