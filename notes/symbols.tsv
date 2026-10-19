@@ -21,3 +21,18 @@ ovl16::80065cb0	ovl16_Main	in-game entry, called by Mode_LoadOverlay with g_Scen
 ovl16::80066c14	ovl16_Exit	called by Mode_LoadOverlay after ovl16_Main returns
 ovl16::80068aec	Scene_LoadCode	loads scene code (base + g_SceneId*2, base picked by g_Scenario) to 0x80158000
 800248f4	Scene_LoadBank	switch on scene number: story scenes 69..98 load bank entry 2016..2031, default 2019, to 0x8015C000
+8001c21c	Tim_Upload	(tim+4 via GsGetTimInfo): LoadImage pixels, and CLUT if present
+8001e1d8	Unpack_Upload	(ctx, work, stream, ...): for each stream (0xE0 batch or plain) Unpack_Stream into work, then Tim_Upload
+8001de94	Unpack_Stream	(src, dst): Unpack_Block until a 0x00 method byte; block k goes to dst + k*0x2000
+8001da78	Unpack_Block	dispatch on method byte (0x14 0x20 0x30 0x31 0x40 0x70..0x74 0xFF); returns bytes consumed, -1 on unknown
+8001d4e0	Unpack_LZ	methods 0x73 (LZ) and 0x74 (LZ + byte-pair tokens)
+8001d434	Unpack_LZReadByte	0x74 reader: token byte -> low byte now, high byte next call
+8001d2d4	Unpack_Mask70	method 0x70: 32-byte groups, fill byte + u32 mask
+8001d3bc	Unpack_RLE71	method 0x71: literal / repeat runs
+8001d9b4	Unpack_Interleave72	method 0x72: embedded 0x73/0x74 block, de-interleaved into even/odd bytes
+8001dbd8	Unpack_Stored	method 0xFF: u16 length + raw bytes
+8001dc24	Unpack_Nibble14	method 0x14: 16-byte table, 4-bit indices
+8001dc9c	Unpack_RLE30	method 0x30: (u8 count, value) pairs
+8001dcf0	Unpack_RLE31	method 0x31: (u16 count, value) triples
+8001dd4c	Unpack_Fill40	method 0x40: value + u16 count
+8001dd8c	Unpack_LZ20	method 0x20: LZ with absolute and relative copies
