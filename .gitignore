@@ -1,0 +1,25 @@
+# Copyrighted game data: never commit
+*.bin
+*.cue
+*.iso
+disc/
+SLES_*
+
+# Extracted / converted assets
+extracted/
+out/
+
+# Ghidra project (local, large)
+ghidra/
+*.gpr
+*.rep/
+*.lock
+
+# Emulator saves, memory cards, BIOS
+*.mcd
+*.mcr
+*.sstate
+bios/
+
+__pycache__/
+*.pyc
