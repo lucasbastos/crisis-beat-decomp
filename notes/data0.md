@@ -61,16 +61,26 @@ Code inside overlays also calls `Data_LoadEntry`/`Data_SeekEntry`. Overlay 16 ca
 ## Runtime log (first session)
 
 Captured with `tools/pcsx/log_loads.lua`. The times are emulated seconds since boot.
-Screen guesses are **unconfirmed**.
+The screens were confirmed by playing.
 
-| Time | Loads | Guess |
+| Time | Loads | Screen |
 |---|---|---|
 | 17.9 | overlay 21 | boot: logos and FMV |
 | 65.5 | overlay 17 (0x1800 bytes) | title / menu |
-| 76–84 | 1, 0, overlay 16, 2016, seek 29, scene code 166 | first in-game scene (demo or intro?) |
-| 89–95 | 1, 0, overlay 20, seek 16 | something that is not gameplay (select / briefing?) |
+| 76–84 | 1, 0, overlay 16, 2016, seek 29, scene code 166 | first in-game scene, before the first playable area (demo or intro: not yet told apart) |
+| 89–95 | 1, 0, overlay 20, seek 16 | a screen that is not gameplay, between that scene and the first area |
 | 103–106 | overlay 16, scene 105 + 106 | gameplay, first area |
-| 205–213 | seek 107, scene 107 + 108 | next area |
+| 205–213 | seek 107, scene 107 + 108 | gameplay, next area |
+
+## Overlays (slot 1, 0x80064668)
+
+| Entry | Size | Role |
+|---|---|---|
+| 21 | 0x6E000 | boot: logos and FMV |
+| 17 | 0x1800 | title / menu |
+| 16 | 0x6E000 | **in-game engine**: loads the scene pairs into slot 2 |
+| 20 | 0x5B000 | screen that is not gameplay, shown before the first area |
+| 19, 24 | | not seen yet |
 
 Seeks prefetch: `seek 16` came about 8 s before `load 16`. `seek 29` targets an empty
 slot, which probably just parks the drive head.

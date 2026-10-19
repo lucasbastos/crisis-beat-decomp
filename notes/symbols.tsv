@@ -5,6 +5,9 @@
 8001e4ec	Data_SeekEntry	(unused, entry): seek drive head to entry n (CdlSetloc + CdlSeekL)
 8001e560	Data_Init	find DATA.0, read 8KB offset table, build g_DataEntrySectors
 8001e630	Stream_ResolveFiles	CdSearchFile each STR/XA name in g_StreamFileTable, store its LBA
+800233a8	Mode_LoadOverlay	loads the slot-1 code overlay (entries 16/17/19/20/21/24) for the current game mode
+80023d30	Scene_LoadData	loads scene data (odd entry, idx + g[0x800588AC]*2) to 0x80154000
+800245bc	Game_LoadCommonData	loads entries 1 -> 0x800D5000 and 0 -> 0x800E2000 before the in-game overlay
 8001a734	g_OverlayBase	pointer, value 0x80064668: load address of code overlays
 8001a790	s_DATA_0	"\DATA.0;1"
 8004809c	g_StreamFileTable	NULL-terminated list of {name*, lba} for MOVIE/ and XA/ files
