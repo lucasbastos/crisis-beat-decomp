@@ -1,7 +1,7 @@
 -- Log every DATA.0 load/seek while the game runs (PCSX-Redux).
 -- Launch: pcsx-redux.exe -iso "Crisis Beat (Europe).cue" -debugger -interpreter -run
 --                       -dofile tools/pcsx/log_loads.lua
--- Output: out/loads.tsv (seconds, event, entry, dst, caller, scene, group), also echoed
+-- Output: out/loads-<date>-<time>.tsv (seconds, event, entry, dst, caller, scene, group), also echoed
 -- to the Lua console. Addresses come from notes/symbols.tsv.
 
 local ffi = require('ffi')
@@ -12,7 +12,8 @@ local G_SCENE_ID      = 0x800588ac -- u32: scene number (area pair = base + scen
 local G_SCENE_GROUP   = 0x8005890f -- u8: selects the scene-code group (base)
 local CLOCK = 33868800             -- PS1 CPU clock, for cycles -> seconds
 
-local log = io.open('out/loads.tsv', 'w')
+local LOG_PATH = 'out/loads-' .. os.date('%Y%m%d-%H%M%S') .. '.tsv' -- one file per run
+local log = io.open(LOG_PATH, 'w')
 if log then log:write('seconds\tevent\tentry\tdst\tcaller\tscene\tgroup\n') end
 
 local function ram(addr) return PCSX.getMemPtr() + bit.band(addr, 0x1fffff) end
@@ -52,4 +53,4 @@ LoadLogBreakpoints = {
     end),
 }
 
-print('log_loads.lua: logging DATA.0 loads to out/loads.tsv')
+print('log_loads.lua: logging DATA.0 loads to ' .. LOG_PATH)

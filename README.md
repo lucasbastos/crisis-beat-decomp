@@ -30,14 +30,15 @@ This repo contains **no game data**. Use your own legally dumped disc image.
 
 ## Runtime logging (PCSX-Redux)
 
-[tools/pcsx/log_loads.lua](tools/pcsx/log_loads.lua) logs every DATA.0 load and seek to `out/loads.tsv`,
-with the current `g_SceneId` and `g_Character`, plus every write to `g_Character`.
-Each run overwrites the log, so copy it first to keep it.
-Run it from the repo root:
+[tools/pcsx/log_loads.lua](tools/pcsx/log_loads.lua) logs every DATA.0 load and seek, with the
+current `g_SceneId` and `g_Character`, plus every write to `g_Character`. Each run writes its
+own `out/loads-<date>-<time>.tsv`. Start it with:
 
 ```
-pcsx-redux.exe -iso "Crisis Beat (Europe).cue" -debugger -interpreter -run -dofile tools\pcsx\log_loads.lua
+powershell -File tools\pcsx\run.ps1
 ```
+
+The emulator process is `pcsx-redux.main` (`pcsx-redux.exe` only launches it).
 
 ## Ghidra workflow
 
