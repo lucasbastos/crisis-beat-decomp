@@ -1,0 +1,14 @@
+# address	name	comment (tab-separated; apply with tools/ghidra_scripts/ApplySymbols.java)
+8001e3a4	Data_GetEntrySector	sum of g_DataEntrySectors[0..n] = sector offset of entry n inside DATA.0
+8001e3d8	Cd_ReadSectorsSync	(lba, dst, count): CdlSetloc + CdRead, waits for completion
+8001e488	Data_LoadEntry	(unused, entry, dst): read DATA.0 entry n into dst
+8001e4ec	Data_SeekEntry	(unused, entry): seek drive head to entry n (CdlSetloc + CdlSeekL)
+8001e560	Data_Init	find DATA.0, read 8KB offset table, build g_DataEntrySectors
+8001e630	Stream_ResolveFiles	CdSearchFile each STR/XA name in g_StreamFileTable, store its LBA
+8001a734	g_OverlayBase	pointer, value 0x80064668: load address of code overlays
+8001a790	s_DATA_0	"\DATA.0;1"
+8004809c	g_StreamFileTable	NULL-terminated list of {name*, lba} for MOVIE/ and XA/ files
+800480b8	g_DataEntrySectors	u16[2037]: entry sizes in sectors (index 0 = the offset table itself)
+80058770	g_DataStartLba	LBA of DATA.0 on disc
+80058774	g_CdLoc	CdlLOC used by the DATA.0 reader
+80100000	g_DataOffsetTable	temporary: raw u32 offset table read by Data_Init

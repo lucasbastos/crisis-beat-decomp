@@ -25,7 +25,20 @@ This repo contains **no game data**. Use your own legally dumped disc image.
 |---|---|
 | `tools/` | Python scripts (standard library only) |
 | `notes/` | Findings: [disc & exe](notes/disc.md), [DATA.0 format](notes/data0.md) |
-| `disc/`, `out/`, `ghidra/` | Local, git-ignored |
+| `tools/ghidra_scripts/` | Ghidra scripts: export functions, decompile xrefs, create functions, apply `notes/symbols.tsv` |
+| `disc/`, `out/`, `ghidra/` | Local, git-ignored (`ghidra/CrisisBeat.gpr` is the Ghidra project) |
+
+## Ghidra workflow
+
+Names live in [notes/symbols.tsv](notes/symbols.tsv), so they are kept in git and can be reviewed.
+Add names there, then apply them to the project (close the Ghidra window first):
+
+```
+<ghidra>\support\analyzeHeadless.bat ghidra CrisisBeat -process SLES_027.93 -noanalysis ^
+    -scriptPath tools\ghidra_scripts -postScript ApplySymbols.java notes\symbols.tsv
+```
+
+Or run `ApplySymbols.java` from Ghidra's Script Manager (category *CrisisBeat*).
 
 ## External tools
 
