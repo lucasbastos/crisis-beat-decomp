@@ -5,6 +5,10 @@
 disc/
 SLES_*
 
+# Downloaded tool archives
+*.zip
+*.7z
+
 # Extracted / converted assets
 extracted/
 out/
