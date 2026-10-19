@@ -49,8 +49,8 @@ Names are listed in [symbols.tsv](symbols.tsv).
 | Entry | Loaded to | Caller | What |
 |---|---|---|---|
 | 16, 17, 19, 20, 21, 24 | `0x80064668` (`g_OverlayBase`) | Mode_LoadOverlay | code overlays (slot 1) |
-| 2c+1, 2c (c = g_Character; 0–15 = 8 pairs) | 0x800D5000, 0x800E2000 | Char_LoadCommonData | **per-character data**, loaded before every in-game section. Seen: c=0 -> 1, 0; c=1 -> 3, 2 |
-| 2016 (c=0), 2018 (c=1) | 0x8015C000 | FUN_800248F4 | per-character `00 02 00 00` sub-archive. Entries 2014–2035 have the same kind of header |
+| 2s+1, 2s (s = g_Scenario; 0–15 = 8 pairs) | 0x800D5000, 0x800E2000 | Scenario_LoadCommonData | **per-scenario data**, loaded before every in-game section. Seen: s=0 -> 1, 0; s=1 -> 3, 2 |
+| 2016–2031 | 0x8015C000 | Scene_LoadBank (0x800248F4) | **per-story-scene bank** (`00 02 00 00` sub-archive). Picked by a switch on the scene number: scenes 69–98 map to 2016–2031, anything else to 2019 |
 | odd: 105, 107, ... | 0x80154000 | FUN_80023D30 (`idx + g[0x800588AC]*2`) | scene data (head `10 00 00 00 30 xx`) |
 | even: 104, 106, 108, 110, also 166 | 0x80158000 | overlay 16 @ 0x80068CAC | **scene code overlay (slot 2)**: u32 id (0x2F, 0x30, 0x31, ...; 166 = 0x11) then MIPS code |
 
@@ -67,9 +67,9 @@ data entry = base - 1 + g_SceneId * 2   -> 0x80154000
 code entry = base     + g_SceneId * 2   -> 0x80158000  (u32 id, then MIPS code + embedded data)
 ```
 
-`base` depends on `g_Character` (u8 at 0x8005890F):
+`base` depends on `g_Scenario` (u8 at 0x8005890F):
 
-| g_Character | base | entries | scenes present |
+| g_Scenario | base | entries | scenes present |
 |---|---|---|---|
 | 0, 10 | 26 | 25–223 | 85 (ids 7..98) |
 | 1, 11 | 224 | 223–421 | 85 (ids 7..98) |
@@ -91,24 +91,37 @@ group overlaps the last code slot of the group before it.
 - **Scene code differs per group.** There are 413 distinct blobs, and they differ in
   embedded binary data rather than in text strings. The header id is the same across
   groups (scene 40 = 0x2F).
-- **A group is a playable character** (confirmed in session 2). Picking Kenneth on the
-  character-select screen (overlay 21, store at ovl21::800683C4) set g_Character = 1,
-  and every scene that followed came from base 224. Each character has their own scenario.
-  Groups 0 and 1 have 85 scenes; groups 2–9 have 55.
-- The select screen offers **4 characters**: Eiji Garland, Julia Jefferson, Kenneth Kirova,
-  Yan H Feisu. 0 = Eiji, 1 = Kenneth.
-- **Hypothesis, untested:** the 10 groups are 4 single characters + 6 two-player
-  pairs (4 choose 2 = 6). Julia and Yan would then be two of groups 2–9. To test, play
-  as Julia, then as Yan, then a 2-player game, and read the `group-write` lines.
-- Character 0 = Eiji (session 1): demo scene 7 -> 39/40, intro 70 -> 166, then 40 -> 105/106, 41 -> 107/108.
-- Character 1 = Kenneth (session 2): intro 74 -> 372, then 30 -> 283/284, 33 -> 289/290, 34 -> 291/292.
-- Before an intro, the game seeks to `base + 3`: entry 29 for character 0, 227 for Kenneth.
+- **A group is a scenario (team), not a character** (sessions 2–3). There are 4 playable
+  characters in two teams, and the 2-player select offers exactly these two pairs:
+
+  | g_Scenario | Team | Set by (overlay 21 store) |
+  |---|---|---|
+  | 0 | Eiji Garland + Julia Jefferson | ovl21::800683A0 (Julia), ovl21::800689A8 (2P) |
+  | 1 | Kenneth Kirova + Yan H Feisu | ovl21::800683C4 (Kenneth, Yan) |
+
+- **The character only picks the intro scene:** Eiji 70, Julia 72, Kenneth 74, Yan 67.
+  After the intro, both members of a team play the same areas (team 0 starts at scene 40,
+  team 1 at scene 30).
+- **Scenes 67–98 look like story cutscenes.** They exist only in groups 0 and 1, include
+  every character intro, and each has its own bank (Scene_LoadBank). Groups 2–9 stop
+  at scene 66, so they hold gameplay areas but no story. What selects them (another
+  mode? difficulty?) is open.
+- Before an intro, the game seeks to `base + 3`: entry 29 for team 0, 227 for team 1.
+
+| Run | g_Scenario | Intro scene -> code entry | Bank | First area |
+|---|---|---|---|---|
+| Eiji (session 1) | 0 | 70 -> 166 | 2016 | 40 -> 105/106, then 41 |
+| Julia (session 3) | 0 | 72 -> 170 | 2017 | 40 |
+| Kenneth (session 2) | 1 | 74 -> 372 | 2018 | 30 -> 283/284, then 33, 34 |
+| Yan (session 3) | 1 | 67 -> 358 | 2019 | 30, then 33 |
+| 2P Eiji + Julia (session 3) | 0 | 70 -> 166 | 2016 | 40 |
+| Attract demo | 0 | 7 -> 40 (no intro) | none | |
 
 ## Runtime logs
 
 Captured with `tools/pcsx/log_loads.lua`. The times are emulated seconds since boot.
 
-### Session 1: Eiji (g_Character 0)
+### Session 1: Eiji (g_Scenario 0)
 
 | Time | Loads | Screen |
 |---|---|---|
@@ -119,14 +132,14 @@ Captured with `tools/pcsx/log_loads.lua`. The times are emulated seconds since b
 | 103–106 | overlay 16, scene 105 + 106 | gameplay, first area |
 | 205–213 | seek 107, scene 107 + 108 | gameplay, next area |
 
-### Session 2: Kenneth (g_Character 1)
+### Session 2: Kenneth (g_Scenario 1)
 
 | Time | Loads | Screen |
 |---|---|---|
 | 18.0 | overlay 21 | boot / title |
-| 133–139 | Mode_LoadOverlay sets character 0; 1, 0, overlay 16, scene 7 (39/40) | attract demo (left idle on the title screen) |
+| 133–139 | Mode_LoadOverlay sets scenario 0; 1, 0, overlay 16, scene 7 (39/40) | attract demo (left idle on the title screen) |
 | 174.3 | overlay 21 | back to title |
-| 227.3 | ovl21::800683C4 writes g_Character = 1 | **Kenneth picked** |
+| 227.3 | ovl21::800683C4 writes g_Scenario = 1 | **Kenneth picked** |
 | 230.3 | overlay 17 | short cutscene after selection |
 | 238–245 | 3, 2, overlay 16, 2018, seek 227, scene code 372 (scene 74) | Kenneth's intro |
 | 252–258 | 3, 2, overlay 20, seek 16 | screen that is not gameplay |
@@ -138,7 +151,7 @@ Captured with `tools/pcsx/log_loads.lua`. The times are emulated seconds since b
 
 | Entry | Size | Role |
 |---|---|---|
-| 21 | 0xCB000 | boot, title, menus, **character select** (writes g_Character). Entry ovl21::80065FFC |
+| 21 | 0xCB000 | boot, title, menus, **character select** (writes g_Scenario). Entry ovl21::80065FFC |
 | 17 | 0x1800 | short cutscene after character select. Entry 0x80065764(mode) |
 | 16 | 0x6E000 | **in-game engine**: loads the scene pairs into slot 2 |
 | 20 | 0x5B000 | screen that is not gameplay, shown before the first area |
@@ -153,8 +166,8 @@ slot, which probably just parks the drive head.
       like function pointers into the overlay. Is it an export table the exe calls through?
 - [x] Load overlays into Ghidra as overlay blocks at 0x80064668 (ovl16 done, see `LoadOverlay.java`).
 - [x] Work out the index math of the scene loaders (see Scene layout).
-- [ ] Groups 2–9 (55 scenes each): which ones are Julia and Yan? Are the rest two-player pairs?
-- [ ] What decides the 0x8015C000 sub-archive index (2016 / 2018)? It is in FUN_800248F4.
+- [ ] Groups 2–9 (55 scenes, no story scenes): what selects them? Another mode or difficulty?
+- [x] The 0x8015C000 bank index is picked per scene by Scene_LoadBank.
 - [x] Overlay 17 is the short cutscene after character select.
 - [ ] Find the meaning of the `0x400`/`0x200` sub-archive headers.
 - [ ] Find out what entries 18, 22 (VAB) and 23 (TIM) are. No direct `Data_LoadEntry` call uses them.
