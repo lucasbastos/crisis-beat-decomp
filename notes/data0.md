@@ -48,9 +48,9 @@ Names are listed in [symbols.tsv](symbols.tsv).
 
 | Entry | Loaded to | Caller | What |
 |---|---|---|---|
-| 16, 17, 19, 20, 21, 24 | `0x80064668` (`g_OverlayBase`) | FUN_800233A8 | code overlays (slot 1) |
-| 0, 1 (seen) | 0x800E2000, 0x800D5000 | FUN_800245BC | always loaded together before overlay 16. Shared game data? |
-| 2016 (seen) | 0x8015C000 | FUN_800248F4 | `00 02 00 00` sub-archive. Entries 2014–2035 have the same kind of header |
+| 16, 17, 19, 20, 21, 24 | `0x80064668` (`g_OverlayBase`) | Mode_LoadOverlay | code overlays (slot 1) |
+| 2c+1, 2c (c = g_Character; 0–15 = 8 pairs) | 0x800D5000, 0x800E2000 | Char_LoadCommonData | **per-character data**, loaded before every in-game section. Seen: c=0 -> 1, 0; c=1 -> 3, 2 |
+| 2016 (c=0), 2018 (c=1) | 0x8015C000 | FUN_800248F4 | per-character `00 02 00 00` sub-archive. Entries 2014–2035 have the same kind of header |
 | odd: 105, 107, ... | 0x80154000 | FUN_80023D30 (`idx + g[0x800588AC]*2`) | scene data (head `10 00 00 00 30 xx`) |
 | even: 104, 106, 108, 110, also 166 | 0x80158000 | overlay 16 @ 0x80068CAC | **scene code overlay (slot 2)**: u32 id (0x2F, 0x30, 0x31, ...; 166 = 0x11) then MIPS code |
 
@@ -67,9 +67,9 @@ data entry = base - 1 + g_SceneId * 2   -> 0x80154000
 code entry = base     + g_SceneId * 2   -> 0x80158000  (u32 id, then MIPS code + embedded data)
 ```
 
-`base` depends on `g_SceneGroup` (u8 at 0x8005890F):
+`base` depends on `g_Character` (u8 at 0x8005890F):
 
-| g_SceneGroup | base | entries | scenes present |
+| g_Character | base | entries | scenes present |
 |---|---|---|---|
 | 0, 10 | 26 | 25–223 | 85 (ids 7..98) |
 | 1, 11 | 224 | 223–421 | 85 (ids 7..98) |
@@ -91,31 +91,50 @@ group overlaps the last code slot of the group before it.
 - **Scene code differs per group.** There are 413 distinct blobs, and they differ in
   embedded binary data rather than in text strings. The header id is the same across
   groups (scene 40 = 0x2F).
-- What a group *means* is open. It is not a language. It is not chosen in overlay 20
-  (which only reads it). It is written by `Mode_LoadOverlay` and overlay 21.
-  Candidates: playable character, difficulty, or game mode.
-- Session 1 ran with group 0: scene 70 -> code entry 166, scene 40 -> 105/106, scene 41 -> 107/108.
+- **A group is a playable character** (confirmed in session 2). Picking Kenneth on the
+  character-select screen (overlay 21, store at ovl21::800683C4) set g_Character = 1,
+  and every scene that followed came from base 224. Each character has their own scenario.
+  Groups 0 and 1 have 85 scenes; groups 2–9 have 55. Who or what groups 2–9 are is still open.
+- Character 0 (the default, session 1): demo scene 7 -> 39/40, intro 70 -> 166, then 40 -> 105/106, 41 -> 107/108.
+- Character 1 = Kenneth (session 2): intro 74 -> 372, then 30 -> 283/284, 33 -> 289/290, 34 -> 291/292.
+- Before an intro, the game seeks to `base + 3`: entry 29 for character 0, 227 for Kenneth.
 
-## Runtime log (first session)
+## Runtime logs
 
 Captured with `tools/pcsx/log_loads.lua`. The times are emulated seconds since boot.
-The screens were confirmed by playing.
+
+### Session 1: default character (g_Character 0)
 
 | Time | Loads | Screen |
 |---|---|---|
-| 17.9 | overlay 21 | boot: logos and FMV |
-| 65.5 | overlay 17 (0x1800 bytes) | title / menu |
+| 17.9 | overlay 21 | boot, title, menus, character select |
+| 65.5 | overlay 17 (0x1800 bytes) | short step after the character is chosen (first labelled "title / menu", corrected by session 2) |
 | 76–84 | 1, 0, overlay 16, 2016, seek 29, scene code 166 | first in-game scene, before the first playable area (demo or intro: not yet told apart) |
 | 89–95 | 1, 0, overlay 20, seek 16 | a screen that is not gameplay, between that scene and the first area |
 | 103–106 | overlay 16, scene 105 + 106 | gameplay, first area |
 | 205–213 | seek 107, scene 107 + 108 | gameplay, next area |
 
+### Session 2: Kenneth (g_Character 1)
+
+| Time | Loads | Screen |
+|---|---|---|
+| 18.0 | overlay 21 | boot / title |
+| 133–139 | Mode_LoadOverlay sets character 0; 1, 0, overlay 16, scene 7 (39/40) | attract demo (left idle on the title screen) |
+| 174.3 | overlay 21 | back to title |
+| 227.3 | ovl21::800683C4 writes g_Character = 1 | **Kenneth picked** |
+| 230.3 | overlay 17 | short step after selection |
+| 238–245 | 3, 2, overlay 16, 2018, seek 227, scene code 372 (scene 74) | Kenneth's intro |
+| 252–258 | 3, 2, overlay 20, seek 16 | screen that is not gameplay |
+| 266–268 | overlay 16, scene 30 (283/284) | gameplay |
+| 345–352 | seek 289, scene 33 (289/290) | next area |
+| 455–460 | seek 291, scene 34 (291/292) | next area |
+
 ## Overlays (slot 1, 0x80064668)
 
 | Entry | Size | Role |
 |---|---|---|
-| 21 | 0xCB000 | boot: logos and FMV. Large, and it writes g_SceneGroup, so it probably holds menus too |
-| 17 | 0x1800 | title / menu |
+| 21 | 0xCB000 | boot, title, menus, **character select** (writes g_Character). Entry ovl21::80065FFC |
+| 17 | 0x1800 | short step after character select. Entry 0x80065764(mode) |
 | 16 | 0x6E000 | **in-game engine**: loads the scene pairs into slot 2 |
 | 20 | 0x5B000 | screen that is not gameplay, shown before the first area |
 | 19, 24 | | not seen yet |
@@ -127,7 +146,10 @@ slot, which probably just parks the drive head.
 
 - [ ] Overlay header: the first u32 is a small number (6..12), followed by what look
       like function pointers into the overlay. Is it an export table the exe calls through?
-- [ ] Load overlays into Ghidra as overlay blocks at 0x80064668 (they overlap each other).
-- [ ] Work out what FUN_800245BC / FUN_800248F4 / FUN_80023D30 load (index math).
+- [x] Load overlays into Ghidra as overlay blocks at 0x80064668 (ovl16 done, see `LoadOverlay.java`).
+- [x] Work out the index math of the scene loaders (see Scene layout).
+- [ ] Who are characters 2–9 (55-scene groups)? Find out how many characters can be picked.
+- [ ] What decides the 0x8015C000 sub-archive index (2016 / 2018)? It is in FUN_800248F4.
+- [ ] Overlay 17: what is the short step after character select?
 - [ ] Find the meaning of the `0x400`/`0x200` sub-archive headers.
 - [ ] Find out what entries 18, 22 (VAB) and 23 (TIM) are. No direct `Data_LoadEntry` call uses them.

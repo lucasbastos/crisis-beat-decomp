@@ -31,7 +31,7 @@ This repo contains **no game data**. Use your own legally dumped disc image.
 ## Runtime logging (PCSX-Redux)
 
 [tools/pcsx/log_loads.lua](tools/pcsx/log_loads.lua) logs every DATA.0 load and seek to `out/loads.tsv`,
-with the current `g_SceneId` and `g_SceneGroup`, plus every write to `g_SceneGroup`.
+with the current `g_SceneId` and `g_Character`, plus every write to `g_Character`.
 Each run overwrites the log, so copy it first to keep it.
 Run it from the repo root:
 

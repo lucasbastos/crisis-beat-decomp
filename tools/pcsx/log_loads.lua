@@ -46,7 +46,7 @@ LoadLogBreakpoints = {
     end),
     -- Fires before the store lands: the group column shows the old value,
     -- the next load line shows the new one.
-    PCSX.addBreakpoint(G_SCENE_GROUP, 'Write', 1, 'g_SceneGroup', function()
+    PCSX.addBreakpoint(G_SCENE_GROUP, 'Write', 1, 'g_Character', function()
         emit('group-write', 0, 0, regs().rawPC)
         return true
     end),
