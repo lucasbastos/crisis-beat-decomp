@@ -207,8 +207,72 @@ def question_rows():
     return rows
 
 
+DASHBOARD_URL = "https://claude.ai/artifact/HJouFMXmC3fZy2iSKUEBcX"
+README_START, README_END = "<!-- progress:start -->", "<!-- progress:end -->"
+
+
+def readme_block(ds, when):
+    """Markdown status block for README.md; same figures as the dashboard."""
+    e, f, fm, q = ds["entries"], ds["functions"], ds["formats"], ds["questions"]
+    total = sum(r["bytes"] for r in e)
+    dec = sum(r["decoded"] for r in e)
+    ident = sum(r["identified"] for r in e)
+    mib = lambda b: f"{b / 2**20:,.1f} MB"
+    unknown_by_kind = {}
+    for r in e:
+        unknown_by_kind[r["kind"]] = unknown_by_kind.get(r["kind"], 0) + r["unknown"]
+    big_kind, big_bytes = max(unknown_by_kind.items(), key=lambda kv: kv[1])
+    mapped = sum("unknown" not in r["kind"].lower() for r in e)
+    fn_total = sum(r["total"] for r in f)
+    fn_us = sum(r["named_by_us"] for r in f)
+    fn_named = fn_us + sum(r["named_by_signature"] for r in f)
+    count = lambda s: sum(x["status"] == s for x in fm)
+    done = sum(x["done"] for x in q)
+    last = ds["milestones"][-1] if ds["milestones"] else {"commit": "none", "title": ""}
+    return "\n".join([
+        README_START,
+        f"Status as of {when} (after commit `{last['commit']}`). "
+        f"Updated on every commit by `tools/hooks/pre-commit`; full charts on the "
+        f"[progress dashboard]({DASHBOARD_URL}) (private until shared).",
+        "",
+        "| Measure | Now |",
+        "|---|---|",
+        f"| DATA.0 bytes understood | **{(dec + ident) / total:.1%}** ({mib(dec + ident)} of {mib(total)}) |",
+        f"| DATA.0 bytes decoded to files | {dec / total:.1%} ({mib(dec)}) |",
+        f"| Entries mapped | {mapped:,} of {len(e):,} |",
+        f"| Unique images extracted | {sum(r['unique_images'] for r in e):,} ({sum(r['images'] for r in e):,} with copies) |",
+        f"| Functions named | {fn_named:,} of {fn_total:,} ({fn_us} by us) |",
+        f"| Formats understood | {count('understood')} of {len(fm)} ({count('partial')} partly) |",
+        f"| Questions answered | {done} of {len(q)} |",
+        f"| Biggest unknown | {big_kind}: {mib(big_bytes)} |",
+        README_END,
+    ])
+
+
+def update_readme(path, block):
+    text = path.read_text()
+    if README_START in text and README_END in text:
+        head, rest = text.split(README_START, 1)
+        _, tail = rest.split(README_END, 1)
+        new = head + block + tail
+    else:
+        raise SystemExit(f"{path}: add {README_START} and {README_END} markers first")
+    if new != text:
+        path.write_text(new)
+        return True
+    return False
+
+
 def main():
-    out = Path(sys.argv[1] if len(sys.argv) > 1 else "out/progress")
+    import argparse
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("out", nargs="?", default="out/progress")
+    ap.add_argument("--readme", metavar="README.md", help="also rewrite the status block in this file")
+    args = ap.parse_args()
+
+    if not (ROOT / "disc/DATA.0").exists():
+        raise SystemExit("disc/DATA.0 not found: extract the disc first (tools/extract_disc.py)")
+    out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     data = (ROOT / "disc/DATA.0").read_bytes()
     datasets = {
@@ -221,7 +285,11 @@ def main():
     for name, rows in datasets.items():
         (out / f"{name}.json").write_text(json.dumps(rows, indent=0))
         print(f"{name}: {len(rows)} rows")
-    print("generated", datetime.now(timezone.utc).isoformat(timespec="seconds"))
+    when = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    if args.readme:
+        changed = update_readme(Path(args.readme), readme_block(datasets, when))
+        print(f"{args.readme}: {'updated' if changed else 'unchanged'}")
+    print("generated", when)
 
 
 if __name__ == "__main__":

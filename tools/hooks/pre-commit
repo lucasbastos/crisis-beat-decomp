@@ -1,0 +1,16 @@
+#!/bin/sh
+# Refresh the progress status block in README.md and stage it with the commit.
+# Enable once per clone:  git config core.hooksPath tools/hooks
+# Skip for one commit:     CB_SKIP_PROGRESS=1 git commit ...
+# Never blocks a commit: if the disc is missing or the script fails, it warns and continues.
+
+[ -n "$CB_SKIP_PROGRESS" ] && exit 0
+root=$(git rev-parse --show-toplevel) || exit 0
+[ -f "$root/disc/DATA.0" ] || { echo "pre-commit: disc/DATA.0 missing, README status not updated" >&2; exit 0; }
+
+if python -I "$root/tools/progress.py" "$root/out/progress" --readme "$root/README.md" >/dev/null; then
+    git add "$root/README.md"
+else
+    echo "pre-commit: tools/progress.py failed, README status not updated" >&2
+fi
+exit 0

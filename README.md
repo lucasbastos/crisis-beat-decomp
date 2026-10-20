@@ -5,6 +5,23 @@ its file formats, and tools to extract its assets.
 
 This repo contains **no game data**. Use your own legally dumped disc image.
 
+## Progress
+
+<!-- progress:start -->
+Status as of 2026-10-20 14:06 UTC (after commit `97599ff`). Updated on every commit by `tools/hooks/pre-commit`; full charts on the [progress dashboard](https://claude.ai/artifact/HJouFMXmC3fZy2iSKUEBcX) (private until shared).
+
+| Measure | Now |
+|---|---|
+| DATA.0 bytes understood | **47.3%** (132.6 MB of 280.1 MB) |
+| DATA.0 bytes decoded to files | 18.5% (51.8 MB) |
+| Entries mapped | 2,021 of 2,037 |
+| Unique images extracted | 4,311 (79,592 with copies) |
+| Functions named | 1,025 of 1,563 (28 by us) |
+| Formats understood | 12 of 18 (3 partly) |
+| Questions answered | 6 of 14 |
+| Biggest unknown | Area code + resources: 137.0 MB |
+<!-- progress:end -->
+
 ## Setup
 
 1. Put `Crisis Beat (Europe).bin` / `.cue` in the repo root (git ignores them).
@@ -49,9 +66,22 @@ formats is worked out, and writes the dashboard's data files (statistics only, n
 python tools/progress.py out/progress
 ```
 
-It reads `out/functions.tsv`, so re-export that from Ghidra first (`ExportFunctions.java`).
-The formats list inside the script is kept by hand: update it when a format is worked out.
-Then ask Claude to upload the new files to the dashboard.
+Add `--readme README.md` to also rewrite the status block under **Progress** above.
+The git hook [tools/hooks/pre-commit](tools/hooks/pre-commit) does exactly that on every commit
+and stages README.md with it (about 10 seconds; it never blocks a commit). Enable it once per clone:
+
+```
+git config core.hooksPath tools/hooks
+```
+
+Set `CB_SKIP_PROGRESS=1` to skip it for one commit.
+
+Notes:
+- Function counts come from `out/functions.tsv`. Re-export it from Ghidra (`ExportFunctions.java`)
+  after naming functions, or the README and dashboard show the last export.
+- The formats list inside the script is kept by hand: update it when a format is worked out.
+- The dashboard itself can only be uploaded by Claude. Commits Claude makes are followed by an
+  upload; after your own commits, ask Claude to refresh the dashboard.
 
 ## Runtime logging (PCSX-Redux)
 
