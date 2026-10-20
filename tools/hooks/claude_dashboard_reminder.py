@@ -21,8 +21,9 @@ if not re.search(r"\bgit\b[^\n;&|]*\bcommit\b", command) or "--dry-run" in comma
 
 print(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": (
     "A git commit just landed in crisis-beat-decomp. The pre-commit hook refreshed "
-    "out/progress/*.json and the README status block. Refresh the progress dashboard "
-    f"{DASHBOARD}: upload each out/progress/*.json as an asset (Artifact publish, asset: true, "
+    "the README status block, but its out/progress data predates this commit, so first "
+    "run `python -I tools/progress.py out/progress` (no --readme). Then refresh the progress "
+    f"dashboard {DASHBOARD}: upload each out/progress/*.json as an asset (Artifact publish, asset: true, "
     "one call per file), then update datasets/<name> with the new source.url and "
     "updated {at, by} (ArtifactData batch, pinned with if_version), and re-read "
     "data/users/me/check. Skip this only if the commit did not run the pre-commit hook "
