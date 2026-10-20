@@ -68,6 +68,33 @@ def classify_sections(blob, secs, seen):
     return dec, ident, unk, images, new
 
 
+AREA_DECODED_LISTS = {0}         # list 0: compressed textures (Res_LoadTextures)
+AREA_IDENTIFIED_LISTS = {2, 3}   # lists 2/3: VAB bodies / headers (Res_LoadSoundBanks)
+
+
+def classify_area_block(blob):
+    """Bytes of an area resource block (from 0x4000) as decoded / identified / unknown.
+    Header and lists are identified; data a list points to takes that list's status and
+    runs to the next known start. Data no list points to directly is unknown."""
+    lists = unpack.area_lists(blob)
+    size = len(blob) - unpack.AREA_CODE_SIZE
+    owner = {0: "identified"}  # the 16-slot table
+    for k, (head, end, targets) in enumerate(lists):
+        owner[head] = "identified"
+        owner.setdefault(end, "unknown")  # whatever follows a list until the next start
+        status = ("decoded" if k in AREA_DECODED_LISTS else
+                  "identified" if k in AREA_IDENTIFIED_LISTS else "unknown")
+        for t in targets:
+            if owner.get(t) in (None, "unknown"):
+                owner[t] = status
+    owner.setdefault(0x40, "decoded")
+    starts = sorted(o for o in owner if o < size)
+    totals = {"decoded": 0, "identified": 0, "unknown": 0}
+    for a, b in zip(starts, starts[1:] + [size]):
+        totals[owner[a]] += b - a
+    return totals["decoded"], totals["identified"], totals["unknown"]
+
+
 def entry_rows(data):
     entries = subarc_list.pack_entries(data)
     seen, rows = set(), []
@@ -104,18 +131,18 @@ def entry_rows(data):
             if area:
                 kind = "Area code + resources"
                 s0a, s0b = area[0]
-                ident = unpack.AREA_CODE_SIZE + 0x40  # code + resource table
                 try:
                     res = unpack.unpack_packed(blob[s0a:s0b])
                 except Exception:
                     res = []
                 tims = [r for r in res if tim2png.parse_tim(r, 0)]
-                dec, images = s0b - s0a, len(tims)
+                images = len(tims)
                 for r in tims:
                     h = hashlib.sha1(r).digest()
                     new += h not in seen
                     seen.add(h)
-                unk = size - ident - dec
+                dec, ident, unk = classify_area_block(blob)
+                ident += unpack.AREA_CODE_SIZE  # the scene code itself
             else:
                 kind, ident = "Story scene code", size
         else:
@@ -171,7 +198,13 @@ def function_rows():
 FORMATS = [
     ("DATA.0 pack table", "Containers", "understood", "u32 offset table, 2037 entries"),
     ("Sub-archives", "Containers", "understood", "same table layout inside entries"),
-    ("Area resource block", "Containers", "partial", "16 sections at 0x4000; section 0 decoded, others not"),
+    ("Area resource block", "Containers", "understood", "16 offset lists at 0x4000, each ending in 0xE5E5E5E5"),
+    ("Area list 0: textures", "Graphics", "understood", "compressed TIMs, uploaded by Res_LoadTextures"),
+    ("Area lists 2/3: sound banks", "Sound", "understood", "VAB bodies / headers, opened by Sound_OpenVab"),
+    ("Area list 1: placement records", "Game logic", "partial", "10-byte records (5 x s16), 0xE5E5 ends"),
+    ("Area lists 4/6: per-object resources", "Game logic", "partial", "indexed by object type, relocated on demand"),
+    ("Area lists 5/7-15", "Game logic", "unknown", "consumers named Res_SetupList*, formats not read yet"),
+    ("Sprite frame tables", "Graphics", "unknown", "4-byte records reached through list 4 descriptors"),
     ("Scene numbering", "Game logic", "understood", "base + scene*2, one base per scenario"),
     ("Scenarios (teams)", "Game logic", "understood", "0 = Eiji + Julia, 1 = Kenneth + Yan"),
     ("Scenario groups 2-9", "Game logic", "unknown", "55 scenes each, no story scenes"),
@@ -184,7 +217,7 @@ FORMATS = [
     ("TIM images", "Graphics", "understood", "converted to PNG"),
     ("Texture animation table", "Graphics", "partial", "LoadImage / MoveImage per frame in overlay 16"),
     ("Sprite tables (04 00 02 00)", "Graphics", "unknown", "next to the images in team data"),
-    ("e5e5e5e5 structures", "Graphics", "unknown", "area sections 3/4 and entry 0; maps or geometry?"),
+    ("0xE5E5E5E5 marker", "Containers", "understood", "end of an offset list (0xE5E5 ends s16 record lists)"),
     ("VAB sound banks", "Sound", "understood", "standard PsyQ format, not converted yet"),
     ("XA music / STR movies", "Sound", "understood", "standard formats, use jPSXdec"),
 ]

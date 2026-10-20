@@ -202,6 +202,30 @@ def area_sections(blob):
     return [(P + a, P + b) for a, b in zip(bounds, bounds[1:])]
 
 
+LIST_END = 0xE5E5E5E5  # terminates every u32 offset list in a resource block
+
+
+def area_lists(blob):
+    """Walk the 16 offset lists of an area-code entry's resource block.
+    Returns [(head, end, targets)] per slot, offsets relative to the block (0x4000),
+    or None. A list is u32 offsets (0 = unused) ending in 0xE5E5E5E5; `end` is just
+    past that terminator. See notes/formats.md."""
+    if not area_sections(blob):
+        return None
+    blk = blob[AREA_CODE_SIZE:]
+    out = []
+    for k in range(16):
+        head = struct.unpack_from("<I", blk, 4 * k)[0]
+        o, targets = head, []
+        while o + 4 <= len(blk) and struct.unpack_from("<I", blk, o)[0] != LIST_END:
+            t = struct.unpack_from("<I", blk, o)[0]
+            if t and t < len(blk):
+                targets.append(t)
+            o += 4
+        out.append((head, min(o + 4, len(blk)), targets))
+    return out
+
+
 def unpack_packed(src):
     """Section 0 of an area resource block: compressed streams back to back,
     each starting on a 4-byte boundary (zero padding between)."""

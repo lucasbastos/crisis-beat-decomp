@@ -8,18 +8,18 @@ This repo contains **no game data**. Use your own legally dumped disc image.
 ## Progress
 
 <!-- progress:start -->
-Status as of 2026-10-20 14:10 UTC (after commit `80387d4`). Updated on every commit by `tools/hooks/pre-commit`; full charts on the [progress dashboard](https://claude.ai/artifact/HJouFMXmC3fZy2iSKUEBcX) (private until shared).
+Status as of 2026-10-20 14:23 UTC (after commit `8fde943`). Updated on every commit by `tools/hooks/pre-commit`; full charts on the [progress dashboard](https://claude.ai/artifact/HJouFMXmC3fZy2iSKUEBcX) (private until shared).
 
 | Measure | Now |
 |---|---|
-| DATA.0 bytes understood | **47.3%** (132.6 MB of 280.1 MB) |
+| DATA.0 bytes understood | **48.2%** (134.9 MB of 280.1 MB) |
 | DATA.0 bytes decoded to files | 18.5% (51.8 MB) |
 | Entries mapped | 2,021 of 2,037 |
 | Unique images extracted | 4,311 (79,592 with copies) |
-| Functions named | 1,025 of 1,563 (28 by us) |
-| Formats understood | 12 of 18 (3 partly) |
-| Questions answered | 6 of 14 |
-| Biggest unknown | Area code + resources: 137.0 MB |
+| Functions named | 1,039 of 1,563 (42 by us) |
+| Formats understood | 16 of 24 (4 partly) |
+| Questions answered | 8 of 16 |
+| Biggest unknown | Area code + resources: 134.7 MB |
 <!-- progress:end -->
 
 ## Setup

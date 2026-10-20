@@ -76,23 +76,32 @@ their images come from the scene banks.
 
 ```
 0x0000  u32 id, MIPS code                    (loaded at 0x80158000)
-0x4000  u32 offsets[16]                      relative to 0x4000, ascending
-0x4040  section 0 .. offsets[0]              section i = [offsets[i-1], offsets[i])
+0x4000  u32 list[16]                         resource block, lands at 0x8015C000
+0x4040  data and lists                       all offsets relative to 0x4000
 ```
 
-Section layout is the same in every area (sizes vary):
+**The block is 16 offset lists, not 16 sections.** `list[k]` is the offset of list k. A
+list is u32 offsets (0 = unused slot) ending in **0xE5E5E5E5**. Lists of s16 records end
+in 0xE5E5. The game turns each offset into a pointer in place (adds 0x8015C000). Data
+can sit anywhere in the block, so the gaps between `list[k]` values are not section
+sizes. The "e5 e5 e5 e5 structures" were list terminators. In a story scene, the
+scene bank (Scene_LoadBank) is loaded to 0x8015C000 instead and uses the same scheme.
 
-| Section | Typical size | Head | What |
-|---|---|---|---|
-| 0 | 0x1A000–0x32000 | method byte | **area textures**: compressed TIM streams back to back, each 4-byte aligned (zero padding) |
-| 1 | 0x1EC–0x3F4 | `40 00 00 00` | small table |
-| 2 | 8 | offset | ? |
-| 3, 4 | up to 0x42000 | `e5 e5 e5 e5` | large structures; entry 0 uses the same marker. Map / geometry? |
-| 5–7 | 0x3000–0x11000 | zeros | ? |
-| 8–15 | small | offsets / zeros | tables |
+Overlay 16 has one setup function per list (names in symbols.tsv):
 
-How the area code finds the block is not traced yet: it never calls `Unpack_Upload`
-directly, and there are no absolute pointers to the streams.
+| List | Consumer | Contents (entry 106) |
+|---|---|---|
+| 0 | Res_LoadTextures | **compressed TIMs** (209), each sent to `Unpack_Upload` |
+| 1 | Res_SetupList1 | one list of 10-byte records (5 x s16, ends 0xE5E5), passed to two placement-like functions |
+| 2 / 3 | Res_LoadSoundBanks | **VAB bodies / headers**, opened in pairs by `Sound_OpenVab` (`SsVabOpenHead` + `SsVabTransBody`). Empty in 106 |
+| 4 / 6 | Res_RelocateObject(id) | 194-entry tables indexed by object type; each entry is itself a list, relocated on first use |
+| 5, 9, 10, 15 | several (5+10 used together in three functions) | 264-entry tables indexed by an id, mostly empty |
+| 7, 8, 11 | Res_SetupList7 / 8 / 11 | single pointer each |
+| 13 | Res_SetupList13 | probably the texture-animation table (next to TexAnim_Update) |
+
+About 100 MB of each area's data is not pointed to by any list directly. It is reached
+through nested lists (for example, list 4's descriptors around 0x5A200 in entry 106 point
+into a region of 4-byte records that count upward, likely sprite frame tables).
 
 ## Coverage
 
@@ -106,8 +115,10 @@ Scene data entries (odd entries 25–2005) hold only VABs.
 
 - [x] Find the decompressor (`Unpack_Upload` and friends, see Compression).
 - [x] Where are the area graphics? Section 0 of each area-code entry's resource block.
-- [ ] How does the area code reach the resource block (and Unpack_Upload)? Trace it at
-      runtime with a breakpoint on Unpack_Stream (0x8001DE94).
-- [ ] The `e5 e5 e5 e5` structures (area sections 3/4, entry 0): maps or geometry?
+- [x] How does the game reach the resource block? Overlay 16 reads the 16 lists at
+      0x8015C000 (Res_* functions); textures go through Res_LoadTextures -> Unpack_Upload.
+- [x] The `e5 e5 e5 e5` "structures": end-of-list markers.
+- [ ] Formats behind lists 4/6 (per-object resources) and the 4-byte frame records.
+- [ ] What lists 1, 5, 7–15 hold (read their Res_SetupList* consumers).
 - [ ] Find the format of the `04 00 02 00` tables (sprite / animation layout?).
 - [ ] Entry 0 / 2 (even per-scenario entries): find their format.

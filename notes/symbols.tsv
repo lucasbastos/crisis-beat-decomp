@@ -36,3 +36,17 @@ ovl16::80068aec	Scene_LoadCode	loads scene code (base + g_SceneId*2, base picked
 8001dcf0	Unpack_RLE31	method 0x31: (u16 count, value) triples
 8001dd4c	Unpack_Fill40	method 0x40: value + u16 count
 8001dd8c	Unpack_LZ20	method 0x20: LZ with absolute and relative copies
+80020a64	Sound_OpenVab	(?, vab_head, vab_body): SsVabOpenHead + SsVabTransBody + SsVabTransCompleted
+ovl16::80067f94	Res_LoadTextures	resource list 0: Unpack_Upload each compressed TIM
+ovl16::800683c4	Res_SetupList1	resource list 1: 5 x s16 records (0xE5E5 ends) -> 80085d58 / 800861bc
+ovl16::80068528	Res_LoadSoundBanks	resource lists 2 (VAB bodies) and 3 (VAB headers) -> Sound_OpenVab
+ovl16::80068824	Res_RelocateObject	(id): relocate entry id of resource lists 4 and 6 on first use
+ovl16::8006818c	Res_SetupList7	resource list 7 -> 8006708c
+ovl16::800682cc	Res_SetupList8	resource list 8 -> 80092d08
+ovl16::800684e8	Res_SetupList9	resource list 9 -> 8008ff4c
+ovl16::800685f4	Res_SetupList10	resource lists 1 and 10
+ovl16::80068278	Res_SetupList11	resource list 11
+ovl16::8009ce98	Res_SetupList13	resource list 13, probably texture animation (next to TexAnim_Update)
+ovl16::80068684	Res_SetupList14	resource list 14
+ovl16::8006831c	Res_SetupList15	resource list 15
+ovl16::8009cf34	TexAnim_Update	per frame: LoadImage / MoveImage texture animation entries
