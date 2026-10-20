@@ -40,6 +40,19 @@ This repo contains **no game data**. Use your own legally dumped disc image.
 | `tools/ghidra_scripts/` | Ghidra scripts: export functions, decompile functions / xrefs, create functions, load overlays, apply `notes/symbols.tsv` |
 | `disc/`, `out/`, `ghidra/` | Local, git-ignored (`ghidra/CrisisBeat.gpr` is the Ghidra project) |
 
+## Progress dashboard
+
+[tools/progress.py](tools/progress.py) measures how much of DATA.0, the executable and the
+formats is worked out, and writes the dashboard's data files (statistics only, no game data):
+
+```
+python tools/progress.py out/progress
+```
+
+It reads `out/functions.tsv`, so re-export that from Ghidra first (`ExportFunctions.java`).
+The formats list inside the script is kept by hand: update it when a format is worked out.
+Then ask Claude to upload the new files to the dashboard.
+
 ## Runtime logging (PCSX-Redux)
 
 [tools/pcsx/log_loads.lua](tools/pcsx/log_loads.lua) logs every DATA.0 load and seek, with the
