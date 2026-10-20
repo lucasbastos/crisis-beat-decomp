@@ -15,9 +15,10 @@ Format (reimplemented from the exe; see notes/formats.md):
   batch   = 0xE0 ... (Unpack_Upload @ 0x8001E1D8): u32 record lengths, see unpack_batch
 
 Usage:
-  python tools/unpack.py out/unpacked disc/DATA.0 1 2016    # sub-archive entries
+  python tools/unpack.py out/assets disc/DATA.0 1 106 2016   # team data, area, scene bank
 """
 import argparse
+import hashlib
 import struct
 import sys
 from pathlib import Path
@@ -168,8 +169,9 @@ def unpack_block(src, pos):
     raise Unsupported(f"method {method:#04x}")
 
 
-def unpack_stream(src, pos=0):
-    """Decode blocks until a 0x00 method byte; block k lands at k*0x2000."""
+def unpack_stream(src, pos=0, with_end=False):
+    """Decode blocks until a 0x00 method byte; block k lands at k*0x2000.
+    with_end=True also returns the offset just past the terminating 0x00."""
     out = bytearray()
     k = 0
     while pos < len(src) and src[pos] != 0:
@@ -179,7 +181,36 @@ def unpack_stream(src, pos=0):
         k += 1
         if used > BLOCK + 3:
             break
-    return bytes(out)
+    return (bytes(out), pos + 1) if with_end else bytes(out)
+
+
+AREA_CODE_SIZE = 0x4000  # area-code entries: code, then a 16-section resource block
+
+
+def area_sections(blob):
+    """Sections of an area-code entry's resource block, or None.
+    Block at 0x4000: u32[16] ascending offsets relative to the block; section 0
+    starts right after the table (0x40) and ends at offset[0]."""
+    P = AREA_CODE_SIZE
+    if len(blob) < P + 0x44:
+        return None
+    table = struct.unpack_from("<16I", blob, P)
+    if not (0x40 < table[0] and all(a <= b for a, b in zip(table, table[1:]))
+            and P + table[-1] <= len(blob)):
+        return None
+    bounds = [0x40, *table]
+    return [(P + a, P + b) for a, b in zip(bounds, bounds[1:])]
+
+
+def unpack_packed(src):
+    """Section 0 of an area resource block: compressed streams back to back,
+    each starting on a 4-byte boundary (zero padding between)."""
+    images, pos = [], 0
+    while pos < len(src) and any(src[pos:pos + 4]):
+        img, end = unpack_stream(src, pos, with_end=True)
+        images.append(img)
+        pos = (end + 3) & ~3
+    return images
 
 
 def unpack_batch(src):
@@ -212,20 +243,33 @@ def main():
     ap.add_argument("out")
     ap.add_argument("pack")
     ap.add_argument("entry", type=int, nargs="+")
+    ap.add_argument("--keep-duplicates", action="store_true",
+                    help="write every copy; by default an image identical to one already "
+                         "written is only listed in index.tsv")
     args = ap.parse_args()
 
     data = Path(args.pack).read_bytes()
     entries = subarc_list.pack_entries(data)
     out = Path(args.out)
-    stats = {"sections": 0, "unpacked": 0, "tims": 0, "unsupported": {}, "errors": 0}
+    out.mkdir(parents=True, exist_ok=True)
+    index = open(out / "index.tsv", "w")
+    index.write("entry\tsection\tn\tsha1\tfile\tbpp\twidth\theight\n")
+    written = {}  # sha1 -> file stem of the first copy
+    stats = {"sections": 0, "unpacked": 0, "tims": 0, "unique": 0, "unsupported": {}, "errors": 0}
     for e in args.entry:
         blob = data[entries[e][0]:entries[e][1]]
-        # Compressed streams only appear as sub-archive sections. Whole entries are
-        # skipped: code overlays start with an id (e.g. 0x30) that looks like a method byte.
-        for i, (a, b) in enumerate(subarc_list.sections(blob) or []):
+        # Compressed streams appear as sub-archive sections, or packed in section 0 of an
+        # area-code entry's resource block. Whole entries are never treated as a stream:
+        # code overlays start with an id (e.g. 0x30) that looks like a method byte.
+        area = area_sections(blob)
+        if area:
+            jobs = [(0, area[0][0], area[0][1], unpack_packed)]
+        else:
+            jobs = [(i, a, b, unpack_any) for i, (a, b) in enumerate(subarc_list.sections(blob) or [])]
+        for i, a, b, decode in jobs:
             stats["sections"] += 1
             try:
-                results = unpack_any(blob[a:b])
+                results = decode(blob[a:b])
             except Unsupported as exc:
                 key = str(exc)
                 stats["unsupported"][key] = stats["unsupported"].get(key, 0) + 1
@@ -235,14 +279,22 @@ def main():
                 continue
             for j, res in enumerate(results):
                 stats["unpacked"] += 1
-                name = f"{e:04d}_{i:03d}" + (f"_{j:02d}" if len(results) > 1 else "")
-                folder = out / f"{e:04d}"
-                folder.mkdir(parents=True, exist_ok=True)
-                (folder / f"{name}.bin").write_bytes(res)
-                for off, tim in tim2png.scan(res):
-                    pal = tim["clut"][0] if tim["clut"] else None
-                    (folder / f"{name}_{off:05x}.png").write_bytes(tim2png.render(tim, pal))
-                    stats["tims"] += 1
+                name = f"{e:04d}_{i:03d}" + (f"_{j:03d}" if len(results) > 1 else "")
+                digest = hashlib.sha1(res).hexdigest()
+                tim = tim2png.parse_tim(res, 0)
+                stats["tims"] += bool(tim)
+                if digest not in written or args.keep_duplicates:
+                    written.setdefault(digest, f"{e:04d}/{name}")
+                    folder = out / f"{e:04d}"
+                    folder.mkdir(parents=True, exist_ok=True)
+                    (folder / f"{name}.bin").write_bytes(res)
+                    if tim:
+                        pal = tim["clut"][0] if tim["clut"] else None
+                        (folder / f"{name}.png").write_bytes(tim2png.render(tim, pal))
+                    stats["unique"] += 1
+                index.write(f"{e}\t{i}\t{j}\t{digest[:12]}\t{written[digest]}"
+                            + (f"\t{tim['bpp']}\t{tim['width']}\t{tim['height']}\n" if tim else "\t\t\t\n"))
+    index.close()
     print(stats)
 
 

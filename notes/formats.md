@@ -68,14 +68,46 @@ LZ commands (0x73 / 0x74), read until a 0x00 byte:
 | `01`..`7D` | that many literal bytes |
 | `1LLLLDDD d` | copy L+3 bytes from DDD*256+d+1 back; reads before the block start give 0 |
 
-**Coverage:** `tools/unpack.py` on all of DATA.0 decodes **1313 streams in 41 entries
-(1–15 and 2005–2035), and every one is a valid TIM**. There were no errors and no unknown
-methods. Scene data entries (odd entries 25–2005) hold only VABs.
+## Area-code entries (even scene entries)
+
+Gameplay scene-code entries (for example 104, 106, 108, 110, 284, 290) are **0x4000 bytes of
+code followed by a resource block**. Story scenes (for example 166, 372) have no block;
+their images come from the scene banks.
+
+```
+0x0000  u32 id, MIPS code                    (loaded at 0x80158000)
+0x4000  u32 offsets[16]                      relative to 0x4000, ascending
+0x4040  section 0 .. offsets[0]              section i = [offsets[i-1], offsets[i])
+```
+
+Section layout is the same in every area (sizes vary):
+
+| Section | Typical size | Head | What |
+|---|---|---|---|
+| 0 | 0x1A000–0x32000 | method byte | **area textures**: compressed TIM streams back to back, each 4-byte aligned (zero padding) |
+| 1 | 0x1EC–0x3F4 | `40 00 00 00` | small table |
+| 2 | 8 | offset | ? |
+| 3, 4 | up to 0x42000 | `e5 e5 e5 e5` | large structures; entry 0 uses the same marker. Map / geometry? |
+| 5–7 | 0x3000–0x11000 | zeros | ? |
+| 8–15 | small | offsets / zeros | tables |
+
+How the area code finds the block is not traced yet: it never calls `Unpack_Upload`
+directly, and there are no absolute pointers to the streams.
+
+## Coverage
+
+`tools/unpack.py` over all 2037 entries decodes **79,581 streams in 405 entries, every one a
+valid TIM, with no errors**. Only **4,300 are unique** (28 MB as PNG): 3,942 first seen in area
+resource blocks and 358 in team data (entries 1–15). Every scene-bank image (2005–2035)
+also appears in the team data. Area textures repeat across the 10 scenario groups.
+Scene data entries (odd entries 25–2005) hold only VABs.
 
 ## Open questions
 
 - [x] Find the decompressor (`Unpack_Upload` and friends, see Compression).
-- [ ] Where are the area graphics? Scene data entries hold only sound. Check the
-      embedded data in the scene code entries (even entries), and entries 0 / 2 / 4 ...
+- [x] Where are the area graphics? Section 0 of each area-code entry's resource block.
+- [ ] How does the area code reach the resource block (and Unpack_Upload)? Trace it at
+      runtime with a breakpoint on Unpack_Stream (0x8001DE94).
+- [ ] The `e5 e5 e5 e5` structures (area sections 3/4, entry 0): maps or geometry?
 - [ ] Find the format of the `04 00 02 00` tables (sprite / animation layout?).
 - [ ] Entry 0 / 2 (even per-scenario entries): find their format.

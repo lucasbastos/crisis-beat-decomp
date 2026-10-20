@@ -24,11 +24,12 @@ This repo contains **no game data**. Use your own legally dumped disc image.
    python tools/tim2png.py --opaque out/tims/gallery disc/GALLERY.0
    python tools/tim2png.py out/tims/data disc/DATA.0 --all-entries
    ```
-5. Decompress the packed graphics (about 1300 TIMs) to `.bin` + `.png`:
+5. Decompress the packed graphics to `.bin` + `.png`, with `index.tsv` listing every copy:
    ```
-   python tools/unpack.py out/unpacked disc/DATA.0 1 3 5 2016   # chosen entries
+   python tools/unpack.py out/assets disc/DATA.0 1 3 106 2016   # chosen entries
    ```
-   Pass every entry number (0–2036) to unpack everything. It takes a few seconds.
+   Pass every entry number (0–2036) to unpack everything: 4,300 unique images
+   (79,581 with duplicates), about 20 seconds. Add `--keep-duplicates` to write every copy.
 
 ## Layout
 
